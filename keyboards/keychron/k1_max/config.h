@@ -78,6 +78,12 @@
 
 #endif
 
+// Added to extend the EEPROM space, copied from k1_pro/config.h
+/* Emulated EEPROM configuration */
+#define WEAR_LEVELING_LOGICAL_SIZE 2048
+#define WEAR_LEVELING_BACKING_SIZE (WEAR_LEVELING_LOGICAL_SIZE * 2)
+#define DYNAMIC_KEYMAP_EEPROM_MAX_ADDR 2047
+
 /* Factory test keys */
 #define FN_KEY_1 MO(1)
 #define FN_KEY_2 MO(3)
