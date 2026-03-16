@@ -38,7 +38,8 @@ pin_t p24g_led_pins[] = P24G_INDICATION_LED_PIN_LIST;
 
 bool dip_switch_update_kb(uint8_t index, bool active) {
     if (index == 0) {
-        default_layer_set(1UL << (active ? 0 : 2));
+        // default_layer_set(1UL << (active ? 0 : 2)); // Origin 0 for mac 2 for win
+        default_layer_set(1UL << (active ? 1 : 0)); // change to 0 for win 1 for mac
     }
     dip_switch_update_user(index, active);
 
