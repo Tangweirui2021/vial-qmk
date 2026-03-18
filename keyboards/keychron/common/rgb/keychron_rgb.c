@@ -33,6 +33,15 @@
 
 #if defined(KEYCHRON_RGB_ENABLE) && defined(EECONFIG_SIZE_CUSTOM_RGB)
 
+typedef struct {
+    uint16_t vialrgb_id;
+    uint16_t qmk_id;
+} vialrgb_supported_mode_t;
+
+#    include "vialrgb_effects.inc"
+
+#    define SUPPORTED_MODES_LENGTH (sizeof(supported_modes) / sizeof(*supported_modes))
+
 #    define PER_KEY_RGB_VER 0x0001
 
 #    define OFFSET_OS_INDICATOR ((uint8_t *)(EECONFIG_BASE_CUSTOM_RGB))
@@ -110,6 +119,11 @@ void eeconfig_reset_custom_rgb(void) {
 
 void eeconfig_init_custom_rgb(void) {
     memcpy(per_key_led, default_per_key_led, sizeof(per_key_led));
+
+    if (!eeconfig_is_kb_datablock_valid()) {
+        eeconfig_reset_custom_rgb();
+    }
+
     eeprom_update_dword(EECONFIG_KEYBOARD, (EECONFIG_KB_DATA_VERSION));
 
     eeprom_read_block(&os_ind_cfg, OFFSET_OS_INDICATOR, sizeof(os_ind_cfg));
@@ -240,15 +254,41 @@ bool mixed_rgb_set_regions(uint8_t *data) {
 }
 #    define EFFECT_DATA_LEN 8
 
+static bool qmk_effect_to_vialrgb_effect(uint8_t qmk_effect, uint8_t *vialrgb_effect) {
+    for (size_t i = 0; i < SUPPORTED_MODES_LENGTH; ++i) {
+        if (pgm_read_word(&supported_modes[i].qmk_id) == qmk_effect) {
+            *vialrgb_effect = pgm_read_word(&supported_modes[i].vialrgb_id);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool vialrgb_effect_to_qmk_effect(uint8_t vialrgb_effect, uint8_t *qmk_effect) {
+    for (size_t i = 0; i < SUPPORTED_MODES_LENGTH; ++i) {
+        if (pgm_read_word(&supported_modes[i].vialrgb_id) == vialrgb_effect) {
+            *qmk_effect = pgm_read_word(&supported_modes[i].qmk_id);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static bool mixed_rgb_get_effect_list(uint8_t *data) {
     uint8_t region = data[0];
     uint8_t start  = data[1];
     uint8_t count  = data[2];
 
-    if (count > 3 || region > EFFECT_LAYERS || start + count > EFFECTS_PER_LAYER) return false;
+    if (count > 3 || region >= EFFECT_LAYERS || start >= EFFECTS_PER_LAYER || start + count > EFFECTS_PER_LAYER) return false;
 
     for (uint8_t i = 0; i < count; i++) {
-        data[1 + i * EFFECT_DATA_LEN] = effect_list[region][start + i].effect;
+        uint8_t effect;
+
+        if (!qmk_effect_to_vialrgb_effect(effect_list[region][start + i].effect, &effect)) return false;
+
+        data[1 + i * EFFECT_DATA_LEN] = effect;
         data[2 + i * EFFECT_DATA_LEN] = effect_list[region][start + i].hue;
         data[3 + i * EFFECT_DATA_LEN] = effect_list[region][start + i].sat;
         data[4 + i * EFFECT_DATA_LEN] = effect_list[region][start + i].speed;
@@ -263,13 +303,18 @@ bool mixed_rgb_set_effect_list(uint8_t *data) {
     uint8_t start  = data[1];
     uint8_t count  = data[2];
 
-    if (count > 3 || region > EFFECT_LAYERS || start + count > EFFECTS_PER_LAYER) return false;
+    if (count > 3 || region >= EFFECT_LAYERS || start >= EFFECTS_PER_LAYER || start + count > EFFECTS_PER_LAYER) return false;
     for (uint8_t i = 0; i < count; i++) {
-        if (data[3 + i * EFFECT_DATA_LEN] >= RGB_MATRIX_CUSTOM_MIXED_RGB) return false;
+        uint8_t qmk_effect;
+
+        if (!vialrgb_effect_to_qmk_effect(data[3 + i * EFFECT_DATA_LEN], &qmk_effect) || qmk_effect >= RGB_MATRIX_CUSTOM_MIXED_RGB) return false;
     }
 
     for (uint8_t i = 0; i < count; i++) {
-        effect_list[region][start + i].effect = data[3 + i * EFFECT_DATA_LEN];
+        uint8_t qmk_effect;
+
+        vialrgb_effect_to_qmk_effect(data[3 + i * EFFECT_DATA_LEN], &qmk_effect);
+        effect_list[region][start + i].effect = qmk_effect;
         effect_list[region][start + i].hue    = data[4 + i * EFFECT_DATA_LEN];
         effect_list[region][start + i].sat    = data[5 + i * EFFECT_DATA_LEN];
         effect_list[region][start + i].speed  = data[6 + i * EFFECT_DATA_LEN];

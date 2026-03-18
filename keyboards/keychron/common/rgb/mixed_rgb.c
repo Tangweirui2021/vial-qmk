@@ -64,7 +64,7 @@ void update_mixed_rgb_effect_count(void) {
 }
 
 bool mixed_rgb(effect_params_t *params) {
-    bool ret;
+    bool ret = false;
 
     extern uint8_t rgb_regions[RGB_MATRIX_LED_COUNT];
     if (params->init) {
@@ -76,7 +76,7 @@ bool mixed_rgb(effect_params_t *params) {
 
     for (int8_t i = EFFECT_LAYERS - 1; i >= 0; i--) {
         params->region = i;
-        ret            = multiple_rgb_effect_runner(params);
+        ret |= multiple_rgb_effect_runner(params);
     }
 
     return ret;
@@ -132,13 +132,14 @@ bool multiple_rgb_effect_runner(effect_params_t *params) {
     if (layer_effect_index[layer] >= EFFECTS_PER_LAYER) layer_effect_index[layer] = 0;
 
     effect = effect_list[layer][effect_index].effect;
+
     hsv.h  = effect_list[layer][effect_index].hue;
     hsv.s  = effect_list[layer][effect_index].sat;
     rgb_matrix_sethsv_noeeprom(hsv.h, hsv.s, hsv.v);
 
     rgb_matrix_set_speed_noeeprom(effect_list[layer][effect_index].speed);
 
-    params->init = last_effect != effect;
+    params->init = params->init || (last_effect != effect);
 #    if 1
     // each effect can opt to do calculations
     // and/or request PWM buffer updates.

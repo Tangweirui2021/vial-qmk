@@ -3,6 +3,12 @@
 RGB_MATRIX_EFFECT(JELLYBEAN_RAINDROPS)
 #    ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
 
+#        ifdef EFFECT_LAYERS
+#            define JELLYBEAN_RAINDROPS_REGION_COUNT EFFECT_LAYERS
+#        else
+#            define JELLYBEAN_RAINDROPS_REGION_COUNT 2
+#        endif
+
 static void jellybean_raindrops_set_color(uint8_t i, effect_params_t* params) {
     if (!HAS_ANY_FLAGS(g_led_config.flags[i], params->flags)) return;
 
@@ -12,7 +18,7 @@ static void jellybean_raindrops_set_color(uint8_t i, effect_params_t* params) {
 }
 
 bool JELLYBEAN_RAINDROPS(effect_params_t* params) {
-    static uint16_t index[2] = { RGB_MATRIX_LED_COUNT + 1,  RGB_MATRIX_LED_COUNT + 1 };      // TODO: more region?
+    static uint16_t index[JELLYBEAN_RAINDROPS_REGION_COUNT];
     uint8_t region = params->region;
 
     // Periodic trigger for LED change
@@ -22,6 +28,7 @@ bool JELLYBEAN_RAINDROPS(effect_params_t* params) {
 
     RGB_MATRIX_USE_LIMITS(led_min, led_max);
     if (params->init) {
+        index[region] = RGB_MATRIX_LED_COUNT + 1;
         for (uint8_t i = led_min; i < led_max; i++) {
             jellybean_raindrops_set_color(i, params);
         }
